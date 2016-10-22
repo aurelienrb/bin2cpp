@@ -11,8 +11,8 @@
  *  License:
  *  - This is free and unencumbered software released into the public domain.
  *  - Anyone is free to copy, modify, publish, use, compile, sell, or
- *    distribute this software, either in source code form or as a compiled
- *    binary, for any purpose, commercial or non-commercial, and by any means.
+ *	distribute this software, either in source code form or as a compiled
+ *	binary, for any purpose, commercial or non-commercial, and by any means.
  *  - For more information, please refer to http://unlicense.org/
  *
  *  Author(s):
@@ -33,7 +33,9 @@ namespace fs = std::tr2::sys;
 struct Options {
 	// list of files to embed
 	std::vector<std::string> inputFiles;
-	// output files
+	// outout directory for generated files
+	fs::path outputDir;
+	// output file names
 	std::string headerFileName;
 	std::string cppFileName;
 	// C++ namespace to use (if any)
@@ -46,31 +48,38 @@ const std::string s_defaultOutputBase = "bin2cpp";
 void displayUsage() {
 	std::cout << "bin2cpp: generates C++11 source code which embed several external (binary) files.\n";
 	std::cout << "Supported options:\n";
-	std::cout << " <input>    : path to an input file or directory to embed in C++ code.\n";
-	std::cout << "              If it's a directory, its content will be recursively iterated.\n";
-	std::cout << "              Note: several inputs can be passed on the command line.\n";
-	std::cout << " -h         : this help message.\n";
-	std::cout << " -ns <name> : name of the namespace to be used in generated code (recommended).\n";
-	std::cout << "              Default is empty (no namespace).\n";
+	std::cout << " <input>	: path to an input file or directory to embed in C++ code.\n";
+	std::cout << "			  If it's a directory, its content will be recursively iterated.\n";
+	std::cout << "			  Note: several inputs can be passed on the command line.\n";
+	std::cout << " -h		 : this help message.\n";
+	std::cout << " -d <path>  : directory where to save the generated files.\n";
 	std::cout << " -o <name>  : base name to be used for the generated .h/.cpp files.\n";
-	std::cout << "              => '-o generated' will produce 'generated.h' and 'generated.cpp' files.\n";
-	std::cout << "              Default value is '" << s_defaultOutputBase << "'.\n";
+	std::cout << "			  => '-o generated' will produce 'generated.h' and 'generated.cpp' files.\n";
+	std::cout << "			  Default value is '" << s_defaultOutputBase << "'.\n";
+	std::cout << " -ns <name> : name of the namespace to be used in generated code (recommended).\n";
+	std::cout << "			  Default is empty (no namespace).\n";
 }
 
 // Parse supported program options (-o, -ns, ...)
-void parseNamedArgument(const std::string & name, const std::string & value, Options & options) {
-	assert(name.front() == '-');
-	assert(!value.empty());
+void parseNamedArgument(const std::string & argName, const std::string & argValue, Options & options) {
+	assert(argName.front() == '-');
+	assert(!argValue.empty());
 
-	if (name == "-ns") {
-		options.namespaceName = value;
+	if (argName == "-d") {
+		if (!fs::is_directory(argValue)) {
+			throw std::runtime_error{ "Invalid output directory: " + argValue };
+		}
+		options.outputDir = argValue;
 	}
-	else if (name == "-o") {
-		options.headerFileName = value + ".h";
-		options.cppFileName = value + ".cpp";
+	else if (argName == "-o") {
+		options.headerFileName = argValue + ".h";
+		options.cppFileName = argValue + ".cpp";
+	}
+	else if (argName == "-ns") {
+		options.namespaceName = argValue;
 	}
 	else {
-		throw std::runtime_error{ "Invalid option name: " + name };
+		throw std::runtime_error{ "Invalid option name: " + argName };
 	}
 }
 
@@ -97,11 +106,11 @@ void parsePositionalArgument(const std::string & value, Options & options) {
 Options parseCommandLine(int argc, char ** argv) {
 	Options options;
 
-    if (argc == 1) {
-        displayUsage();
-        std::exit(0);
-    }
-    
+	if (argc == 1) {
+		displayUsage();
+		std::exit(0);
+	}
+	
 	for (int i = 1; i < argc; ++i) {
 		const std::string arg{ argv[i] };
 
@@ -147,7 +156,7 @@ void convertFileDataToCppSource(const std::string & fileName, const std::string 
 	size_t char_count{ 0 };
 	char c;
 	while (file.get(c)) {
-		if (char_count % 5 == 0) {
+		if (char_count % 20 == 0) {
 			stream << "\n\t\t";
 		}
 		char_count += 1;
@@ -186,9 +195,9 @@ void generateHeaderFile(const Options & options) {
 		const FileInfo * end() const {
 			return begin() + size();
 		}
-        const size_t size() const {
-            return fileInfoListSize;
-        }
+		const size_t size() const {
+			return fileInfoListSize;
+		}
 	};
 
 	inline FileInfoRange fileList() {
@@ -196,9 +205,11 @@ void generateHeaderFile(const Options & options) {
 	}
 )raw";
 
-	std::cout << "Generating " << options.headerFileName << "...\n";
-
-	std::ofstream stream{ options.headerFileName };
+	const fs::path fileName = options.outputDir.empty() ?
+		options.headerFileName :
+		options.outputDir / options.headerFileName;
+	std::cout << "Generating " << fileName.generic_string() << "...\n";
+	std::ofstream stream{ fileName };
 	if (stream) {
 		stream << "#pragma once\n";
 		stream << "\n";
@@ -219,9 +230,12 @@ void generateHeaderFile(const Options & options) {
 }
 
 void generateBodyFile(const Options & options) {
-	std::cout << "Generating " << options.cppFileName << "...\n";
+	const fs::path fileName = options.outputDir.empty() ?
+		options.cppFileName :
+		options.outputDir / options.cppFileName;
 
-	std::ofstream stream{ options.cppFileName };
+	std::cout << "Generating " << fileName.generic_string() << "...\n";
+	std::ofstream stream{ fileName };
 	if (stream) {
 		stream << "#include \"" << options.headerFileName << "\"\n";
 		stream << "\n";
@@ -275,7 +289,7 @@ int main(int argc, char ** argv) {
 	}
 	catch (const std::exception & e) {
 		std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
+		return 1;
 	}
-    return 0;
+	return 0;
 }

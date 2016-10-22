@@ -21,11 +21,12 @@ Supported options:
               If it's a directory, its content will be recursively iterated.
               Note: several inputs can be passed on the command line.
  -h         : this help message.
- -ns <name> : name of the namespace to be used in generated code (recommended).
-              Default is empty (no namespace).
+ -d <path>  : directory where to save the generated files.
  -o <name>  : base name to be used for the generated .h/.cpp files.
               => '-o generated' will produce 'generated.h' and 'generated.cpp' files.
               Default value is 'bin2cpp'.
+ -ns <name> : name of the namespace to be used in generated code (recommended).
+              Default is empty (no namespace).
 ```
  
 ## Example
@@ -33,16 +34,18 @@ Supported options:
 ### Invocation
 
 ```
-D:\test>dir files /b
+D:\test>dir /b input
 golden_master.bin
 
-D:\test>bin2cpp -ns myNS -o generated files/
-Ready to process 1 file(s).
-Generating generated.h...
-Generating generated.cpp...
-  files/golden_master.bin
+D:\test>mkdir output
 
-D:\test>dir /b
+D:\test>bin2cpp -ns myNamespace -o generated -d output input
+Ready to process 1 file(s).
+Generating output/generated.h...
+Generating output/generated.cpp...
+  input/golden_master.bin
+
+D:\test>dir /b output
 generated.cpp
 generated.h
 ```
@@ -50,17 +53,17 @@ generated.h
 ### Importing and using the generated code
 
 ```cpp
-#include "generated.h"
+#include "output/generated.h"
 #include <iostream>
 
 int main() {
-    for (auto file : myNS::fileList()) {
-        std::cout << "Name: " << file.name() << "\n";
-        // content() returns a "const std::string &" to a static object
-        // that is created once only if requested 
-        std::cout << "Size: " << file.content().size() << "\n";
-        std::cout << "Data: " << file.content() << "\n";
-    }
+	for (auto file : myNamespace::fileList()) {
+		std::cout << "Name: " << file.name() << "\n";
+		// content() returns a "const std::string &" to a static object
+		// that is created once only if requested 
+		std::cout << "Size: " << file.content().size() << "\n";
+		std::cout << "Data: " << file.content() << "\n";
+	}
 }
 ```
 ![](example.png)
@@ -74,7 +77,7 @@ int main() {
 
 #include <string>
 
-namespace myNS {
+namespace myNamespace {
 	struct FileInfo {
 		const char * fileName;
 		const char * fileData;
@@ -100,16 +103,15 @@ namespace myNS {
 		const FileInfo * end() const {
 			return begin() + size();
 		}
-        const size_t size() const {
-            return fileInfoListSize;
-        }
+		const size_t size() const {
+			return fileInfoListSize;
+		}
 	};
 
 	inline FileInfoRange fileList() {
 		return FileInfoRange{};
 	}
 }
-
 ```
 
 ### generated.cpp
@@ -118,16 +120,14 @@ namespace myNS {
 #include "generated.h"
 
 namespace /* anonymous */ {
-	const char * file0_name = "files/golden_master.bin";
+	const char * file0_name = "input/golden_master.bin";
 	const unsigned int file0_data_size = 256;
 	const unsigned char file0_data[file0_data_size] = {
-		0x0,0x1,0x2,0x3,0x4,
-		// ...
-		0xff,
+		0x0,0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,0x9,0xa, /* ... */
 	};
 }
 
-namespace myNS {
+namespace myNamespace {
 	const unsigned int fileInfoListSize = 1;
 	const FileInfo fileInfoList[fileInfoListSize] = {
 		{ file0_name, reinterpret_cast<const char*>(file0_data), file0_data_size },

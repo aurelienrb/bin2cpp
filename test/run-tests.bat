@@ -12,10 +12,18 @@ echo =======
 %BIN2CPP% -h || goto:command_line_check_failed
 echo =======
 
+REM test with missing option value
 %BIN2CPP% -ns && goto:command_line_check_failed
 echo =======
 
 %BIN2CPP% -o && goto:command_line_check_failed
+echo =======
+
+%BIN2CPP% -d && goto:command_line_check_failed
+echo =======
+
+REM test with invalid output dir
+%BIN2CPP% -d nonexisting && goto:command_line_check_failed
 echo =======
 
 REM test with invalid input file
@@ -29,20 +37,8 @@ if not exist bin2cpp.cpp goto:command_line_check_failed
 del bin2cpp.h bin2cpp.cpp
 echo =======
 
-:test_generated_cpp
-REM see test.cpp for details
-mkdir files || goto:test_failed
-copy golden_master.bin files\  || goto:test_failed
-%BIN2CPP% -ns myNS -o generated files || goto:test_failed
-if not exist generated.h goto:test_failed
-if not exist generated.cpp goto:test_failed
-del /q files\*
-rd /q files
-
-:build_test_cpp
+:build_and_run_test_cpp
 call build-and-run-cpp-test.bat || goto:test_failed
-del generated.h
-del generated.cpp
 
 REM OK!
 exit /b 0
