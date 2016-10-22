@@ -143,11 +143,14 @@ Options parseCommandLine(int argc, char ** argv) {
 void convertFileDataToCppSource(const std::string & fileName, const std::string & fileId, std::ostream & stream) {
 	assert(fs::is_regular_file(fileName));
 
-	std::ifstream file{ fileName, std::ios_base::in | std::ios_base::binary };
-	if (!file) {
+	std::ifstream inputFile{ fileName, std::ios_base::in | std::ios_base::binary };
+	if (!inputFile) {
 		throw std::runtime_error{std::string("Failed to open file ") + fileName};
 	}
 
+	// save formatting flags of the given stream
+	std::ios::fmtflags flags(stream.flags());
+	
 	const auto fileLen = static_cast<unsigned int>(fs::file_size(fileName));
 	stream << "\tconst char * " << fileId << "_name = \"" << fileName << "\";\n";
 	stream << "\tconst unsigned int " << fileId << "_data_size = " << fileLen << ";\n";
@@ -155,7 +158,7 @@ void convertFileDataToCppSource(const std::string & fileName, const std::string 
 
 	size_t char_count{ 0 };
 	char c;
-	while (file.get(c)) {
+	while (inputFile.get(c)) {
 		if (char_count % 20 == 0) {
 			stream << "\n\t\t";
 		}
@@ -166,6 +169,9 @@ void convertFileDataToCppSource(const std::string & fileName, const std::string 
 	assert(char_count == fileLen);
 
 	stream << "\n\t};\n";
+
+	// restore save formatting flags
+	stream.flags(flags);
 }
 
 void generateHeaderFile(const Options & options) {
