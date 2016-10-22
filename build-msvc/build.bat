@@ -26,6 +26,7 @@ copy /Y %OUTDIR%\bin2cpp.exe bin\
 :clean
 del /s /f /q %OUTDIR%
 rd /s /q %OUTDIR%
+rd /s /q x64
 
 echo.
 echo Success!

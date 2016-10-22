@@ -97,6 +97,11 @@ void parsePositionalArgument(const std::string & value, Options & options) {
 Options parseCommandLine(int argc, char ** argv) {
 	Options options;
 
+    if (argc == 1) {
+        displayUsage();
+        std::exit(0);
+    }
+    
 	for (int i = 1; i < argc; ++i) {
 		const std::string arg{ argv[i] };
 
@@ -137,7 +142,7 @@ void convertFileDataToCppSource(const std::string & fileName, const std::string 
 	const auto fileLen = static_cast<unsigned int>(fs::file_size(fileName));
 	stream << "\tconst char * " << fileId << "_name = \"" << fileName << "\";\n";
 	stream << "\tconst unsigned int " << fileId << "_data_size = " << fileLen << ";\n";
-	stream << "\tconst char " << fileId << "_data[" << fileId << "_data_size] = {";
+	stream << "\tconst unsigned char " << fileId << "_data[" << fileId << "_data_size] = {";
 
 	size_t char_count{ 0 };
 	char c;
@@ -161,6 +166,10 @@ void generateHeaderFile(const Options & options) {
 		const char * fileData;
 		const unsigned int fileDataSize;
 
+		std::string name() const {
+			return fileName;
+		}
+
 		const std::string & content() const {
 			static const std::string data{ fileData, fileDataSize };
 			return data;
@@ -175,8 +184,11 @@ void generateHeaderFile(const Options & options) {
 			return &fileInfoList[0];
 		}
 		const FileInfo * end() const {
-			return begin() + fileInfoListSize;
+			return begin() + size();
 		}
+        const size_t size() const {
+            return fileInfoListSize;
+        }
 	};
 
 	inline FileInfoRange fileList() {
@@ -236,7 +248,7 @@ void generateBodyFile(const Options & options) {
 		stream << "\tconst unsigned int fileInfoListSize = " << fileIds.size() << ";\n";
 		stream << "\tconst FileInfo fileInfoList[fileInfoListSize] = {\n";
 		for (auto id : fileIds) {
-			stream << "\t\t{ " << id << "_name, " << id << "_data, " << id << "_data_size },\n";
+			stream << "\t\t{ " << id << "_name, reinterpret_cast<const char*>(" << id << "_data), " << id << "_data_size },\n";
 		}
 		stream << "\t};\n";
 		if (!options.namespaceName.empty()) {
@@ -263,5 +275,7 @@ int main(int argc, char ** argv) {
 	}
 	catch (const std::exception & e) {
 		std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
 	}
+    return 0;
 }
