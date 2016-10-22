@@ -1,12 +1,12 @@
 /*
  *  bin2cpp:
- *  - generates C++ source files to embed the content of other external files
- *  - the generated code is in C++98 to allow better reuse
+ *  - generates C++11 source code which embed several external (binary) files.
  *
  *  Features:
- *  - can wrap the generated code into a given namespace
- *  - can iterate (recursively) over all the files in a given folder to embed them all at once
- *  - names of the embedded files comes along their data to allow querying by file name
+ *  - can wrap the generated code into a namespace
+ *  - can iterate (recursively) over the files of a given folder
+ *  - name of the original input file is also embedded with its data
+ *  - provides a C++11 interface compatible with range-based for loops  
  *
  *  License:
  *  - This is free and unencumbered software released into the public domain.
@@ -44,9 +44,9 @@ const std::string s_defaultOutputBase = "bin2cpp";
 
 // Display help message
 void displayUsage() {
-	std::cout << "bin2cpp: generates C++ source files to embed the content of other external files.\n";
+	std::cout << "bin2cpp: generates C++11 source code which embed several external (binary) files.\n";
 	std::cout << "Supported options:\n";
-	std::cout << " <input>    : path to an input file or directory to convert to C++.\n";
+	std::cout << " <input>    : path to an input file or directory to embed in C++ code.\n";
 	std::cout << "              If it's a directory, its content will be recursively iterated.\n";
 	std::cout << "              Note: several inputs can be passed on the command line.\n";
 	std::cout << " -h         : this help message.\n";
