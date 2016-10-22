@@ -1,53 +1,142 @@
 # bin2cpp
-Generates C++ source files to embed the content of other external files. The generated code is in C++98 to allow better reuse.
+Generates C++11 source code which embed several external (binary) files.
 
 ## Features
- - can wrap the generated code into a given namespace
- - can iterate (recursively) over all the files in a given folder to embed them all at once
- - names of the embedded files comes along their data to allow querying by file name
+ - can wrap the generated code into a namespace
+ - can iterate (recursively) over the files of a given folder
+ - name of the original input file is also embedded with its data
+ - provides a C++11 interface compatible with range-based `for` loops  
 
 ## License
  - This is free and unencumbered software released into the **public domain**.
  - Anyone is free to copy, modify, publish, use, compile, sell, or distribute this software, either in source code form or as a compiled binary, for any purpose, commercial or non-commercial, and by any means.
  - For more information, please refer to [http://unlicense.org/]()
+
+## Supported options
+
+```
+bin2cpp: generates C++11 source code which embed several external (binary) files.
+Supported options:
+ <input>    : path to an input file or directory to embed in C++ code.
+              If it's a directory, its content will be recursively iterated.
+              Note: several inputs can be passed on the command line.
+ -h         : this help message.
+ -ns <name> : name of the namespace to be used in generated code (recommended).
+              Default is empty (no namespace).
+ -o <name>  : base name to be used for the generated .h/.cpp files.
+              => '-o generated' will produce 'generated.h' and 'generated.cpp' files.
+              Default value is 'bin2cpp'.
+```
  
 ## Example
 
-```bin2cpp -ns embedded -o myfiles mydirectory/```
+### Invocation
+
+```
+D:\test>dir files /b
+golden_master.bin
+
+D:\test>bin2cpp -ns myNS -o generated files/
+Ready to process 1 file(s).
+Generating generated.h...
+Generating generated.cpp...
+  files/golden_master.bin
+
+D:\test>dir /b
+generated.cpp
+generated.h
+```
+
+### Importing and using the generated code
+
+```cpp
+#include "generated.h"
+#include <iostream>
+
+int main() {
+    for (auto file : myNS::fileList()) {
+        std::cout << "Name: " << file.name() << "\n";
+        // content() returns a "const std::string &" to a static object
+        // that is created once only if requested 
+        std::cout << "Size: " << file.content().size() << "\n";
+        std::cout << "Data: " << file.content() << "\n";
+    }
+}
+```
+![](example.png)
+
+## Generated code
+
+### generated.h
 
 ```cpp
 #pragma once
 
-namespace embedded {
-    struct FileInfo {
-        const char * file_name;
-        const char file_data;
-        const size_t file_data_length;
-    };
+#include <string>
 
-    extern const unsigned int fileListSize;
-    extern const FileInfo fileList[];
+namespace myNS {
+	struct FileInfo {
+		const char * fileName;
+		const char * fileData;
+		const unsigned int fileDataSize;
+
+		std::string name() const {
+			return fileName;
+		}
+
+		const std::string & content() const {
+			static const std::string data{ fileData, fileDataSize };
+			return data;
+		}
+	};
+
+	extern const unsigned int fileInfoListSize;
+	extern const FileInfo fileInfoList[];
+
+	struct FileInfoRange {
+		const FileInfo * begin() const {
+			return &fileInfoList[0];
+		}
+		const FileInfo * end() const {
+			return begin() + size();
+		}
+        const size_t size() const {
+            return fileInfoListSize;
+        }
+	};
+
+	inline FileInfoRange fileList() {
+		return FileInfoRange{};
+	}
 }
+
 ```
 
+### generated.cpp
+
 ```cpp
-#include "myfiles.h"
+#include "generated.h"
 
 namespace /* anonymous */ {
-    const char * file0_name = "test.txt";
-    const unsigned int file0_data_size = 9;
-    const char file0_data[file0_data_size] = {
-        0x4f,0x4b,0x31,0xd,0xa,
-        0x4f,0x4b,0x32,0x21,
-    };
+	const char * file0_name = "files/golden_master.bin";
+	const unsigned int file0_data_size = 256;
+	const unsigned char file0_data[file0_data_size] = {
+		0x0,0x1,0x2,0x3,0x4,
+		// ...
+		0xff,
+	};
 }
 
-namespace embedded {
-    const unsigned int fileListSize = 1;
-    const FileInfo fileList[] = {
-            { file0_name, file0_data, file0_data_size },
-    };
-}```
+namespace myNS {
+	const unsigned int fileInfoListSize = 1;
+	const FileInfo fileInfoList[fileInfoListSize] = {
+		{ file0_name, reinterpret_cast<const char*>(file0_data), file0_data_size },
+	};
+}
+```
+## Building the source
 
-## Supported compilers
+There's just a single ```main.cpp``` file that depends on ```filesystem``` library.
+
+### Supported compilers
  - Visual C++ 2015
