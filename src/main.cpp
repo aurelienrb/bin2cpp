@@ -28,8 +28,6 @@
 #include <filesystem>
 namespace fs = std::tr2::sys;
 
-#include "generated.h"
-
 // Program options.
 // We don't support Unicode (wide strings) but that's on purpose (given strings will appear in C++ source code)
 struct Options {
@@ -251,12 +249,6 @@ void generateBodyFile(const Options & options) {
 }
 
 int main(int argc, char ** argv) {
-	for (auto file : NS::fileList()) {
-		std::cout << file.fileName << "\n";
-		std::cout << file.content() << "\n";
-	}
-	return 0;
-
 	try {
 		const auto options = parseCommandLine(argc, argv);
 		if (options.inputFiles.empty()) {
