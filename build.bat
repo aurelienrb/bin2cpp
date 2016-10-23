@@ -11,6 +11,8 @@ call "%VS140COMNTOOLS%..\..\VC\vcvarsall.bat" x86_amd64 || goto:eof
 goto:msbuild
 
 :msbuild
+pushd build-msvc
+
 REM we build on x86 to be compatible with non x64 Windows
 msbuild bin2cpp.vcxproj /p:Configuration=Release /p:Platform=x86
 
@@ -27,6 +29,7 @@ copy /Y %OUTDIR%\bin2cpp.exe bin\
 del /s /f /q %OUTDIR%
 rd /s /q %OUTDIR%
 rd /s /q x64
+popd
 
 echo.
 echo Success!

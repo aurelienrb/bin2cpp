@@ -185,9 +185,8 @@ void generateHeaderFile(const Options & options) {
 			return fileName;
 		}
 
-		const std::string & content() const {
-			static const std::string data{ fileData, fileDataSize };
-			return data;
+		std::string content() const {
+			return std::string{ fileData, fileDataSize };
 		}
 	};
 

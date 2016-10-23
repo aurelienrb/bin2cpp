@@ -10,7 +10,8 @@ int main() {
 		// check file name
 		ASSERT_EQ(file.name(), "input/golden_master.bin");
 		// check file data
-		ASSERT_EQ(file.content().length(), 256);
+		ASSERT_EQ(file.fileDataSize, 256);
+		ASSERT_EQ(file.fileDataSize, file.content().size());
 		for (size_t i = 0; i < 256; ++i) {
 			const size_t c = static_cast<unsigned char>(file.content().at(i));
 			ASSERT_EQ(c, i);
